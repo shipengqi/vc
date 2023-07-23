@@ -6,16 +6,22 @@ import (
 )
 
 type Comparable interface {
-	Original() string
-	String() string
+	// Version converts major,minor and patch to a string.
 	Version() string
+	// Major returns the major version.
 	Major() uint64
+	// Minor returns the minor version.
 	Minor() uint64
+	// Patch returns the patch version.
 	Patch() uint64
-	IncMajor() Comparable
-	IncMinor() Comparable
-	IncPatch() Comparable
+	// Prerelease returns the prerelease version.
 	Prerelease() string
+	// IncMajor produces the next major version.
+	IncMajor() Comparable
+	// IncMinor produces the next minor version.
+	IncMinor() Comparable
+	// IncPatch produces the next patch version.
+	IncPatch() Comparable
 }
 
 // Lt tests if one version is less than another one.

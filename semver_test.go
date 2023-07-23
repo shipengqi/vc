@@ -1,173 +1,146 @@
 package vc
 
 import (
-	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-type regt struct {
-	ver   string
-	valid bool
-}
-
-type semvert struct {
-	err   bool
-	ver   string
-	pre   string
-	meta  string
-	major uint64
-	minor uint64
-	patch uint64
-}
-
-func TestReg(t *testing.T) {
-	tests := []regt{
-		{"0.0.4", true},
-		{"1.2.3", true},
-		{"v0.0.4", true},
-		{"v1.2.3", true},
-		{"10.20.30", true},
-		{"1.1.2-prerelease+meta", true},
-		{"1.1.2+meta", true},
-		{"1.1.2+meta-valid", true},
-		{"v1.1.2-prerelease+meta", true},
-		{"v1.1.2+meta", true},
-		{"v1.1.2+meta-valid", true},
-		{"1.0.0-alpha", true},
-		{"1.0.0-beta", true},
-		{"1.0.0-alpha.beta", true},
-		{"1.0.0-alpha.beta.1", true},
-		{"1.0.0-alpha.1", true},
-		{"1.0.0-alpha0.valid", true},
-		{"1.0.0-alpha.0valid", true},
-		{"1.0.0-alpha-a.b-c-somethinglong+build.1-aef.1-its-okay", true},
-		{"v1.0.0-alpha0.valid", true},
-		{"v1.0.0-alpha.0valid", true},
-		{"v1.0.0-alpha-a.b-c-somethinglong+build.1-aef.1-its-okay", true},
-		{"1.0.0-rc.1+build.1", true},
-		{"2.0.0-rc.1+build.123", true},
-		{"1.2.3-beta", true},
-		{"10.2.3-DEV-SNAPSHOT", true},
-		{"1.2.3-SNAPSHOT-123", true},
-		{"v1.2.3-beta", true},
-		{"v10.2.3-DEV-SNAPSHOT", true},
-		{"v1.2.3-SNAPSHOT-123", true},
-		{"1.0.0", true},
-		{"2.0.0", true},
-		{"1.1.7", true},
-		{"2.0.0+build.1848", true},
-		{"2.0.1-alpha.1227", true},
-		{"1.0.0-alpha+beta", true},
-		{"1.2.3----RC-SNAPSHOT.12.9.1--.12+788", true},
-		{"1.2.3----R-S.12.9.1--.12+meta", true},
-		{"1.2.3----RC-SNAPSHOT.12.9.1--.12", true},
-		{"1.0.0+0.build.1-rc.10000aaa-kk-0.1", true},
-		{"99999999999999999999999.999999999999999999.99999999999999999", true},
-		{"1.0.0-0A.is.legal", true},
+func TestNewSemverStr(t *testing.T) {
+	tests := []struct {
+		version string
+		err     bool
+	}{
+		{"1.2.3", false},
+		{"1.2.3-alpha.01", true},
+		{"1.2.3+test.01", false},
+		{"1.2.3-alpha.-1", false},
+		{"v1.2.3", false},
+		{"1.0", false},
+		{"v1.0", false},
 		{"1", false},
-		{"1.2", false},
-		{"1.2.3-0123", false},
-		{"1.2.3-0123.0123", false},
-		{"c1.2.3-0123", false},
-		{"v1.2.3-0123.0123", false},
-		{"1.1.2+.123", false},
-		{"+invalid", false},
-		{"-invalid", false},
-		{"-invalid+invalid", false},
-		{"-invalid.01", false},
-		{"alpha", false},
-		{"alpha.beta", false},
-		{"alpha.beta.1", false},
-		{"alpha.1", false},
-		{"alpha+beta", false},
-		{"alpha_beta", false},
-		{"alpha.", false},
-		{"alpha..", false},
-		{"beta", false},
-		{"1.0.0-alpha_beta", false},
-		{"-alpha.", false},
-		{"1.0.0-alpha..", false},
-		{"1.0.0-alpha..1", false},
-		{"1.0.0-alpha...1", false},
-		{"1.0.0-alpha....1", false},
-		{"1.0.0-alpha.....1", false},
-		{"1.0.0-alpha......1", false},
-		{"1.0.0-alpha.......1", false},
-		{"01.1.1", false},
-		{"1.01.1", false},
-		{"1.1.01", false},
-		{"1.2", false},
-		{"1.2.3.DEV", false},
-		{"1.2-SNAPSHOT", false},
-		{"1.2.31.2.3----RC-SNAPSHOT.12.09.1--..12+788", false},
-		{"1.2-RC-SNAPSHOT", false},
-		{"-1.0.3-gamma+b7718", false},
-		{"+justmeta", false},
-		{"9.8.7+meta+meta", false},
-		{"9.8.7-whatever+meta+meta", false},
-		{"99999999999999999999999.999999999999999999.99999999999999999----RC-SNAPSHOT.12.09.1--------------------------------..12", false},
+		{"v1", false},
+		{"1.2.beta", true},
+		{"v1.2.beta", true},
+		{"foo", true},
+		{"1.2-5", false},
+		{"v1.2-5", false},
+		{"1.2-beta.5", false},
+		{"v1.2-beta.5", false},
+		{"\n1.2", true},
+		{"\nv1.2", true},
+		{"1.2.0-x.Y.0+metadata", false},
+		{"v1.2.0-x.Y.0+metadata", false},
+		{"1.2.0-x.Y.0+metadata-width-hypen", false},
+		{"v1.2.0-x.Y.0+metadata-width-hypen", false},
+		{"1.2.3-rc1-with-hypen", false},
+		{"v1.2.3-rc1-with-hypen", false},
+		{"1.2.3.4", true},
+		{"v1.2.3.4", true},
+		{"1.2.2147483648", false},
+		{"1.2147483648.3", false},
+		{"2147483648.3.0", false},
+
+		// Due to having 4 parts these should produce an error. See
+		// https://github.com/Masterminds/semver/issues/185 for the reason for
+		// these tests.
+		{"12.3.4.1234", true},
+		{"12.23.4.1234", true},
+		{"12.3.34.1234", true},
+
+		// The SemVer spec in a pre-release expects to allow [0-9A-Za-z-].
+		{"20221209-update-renovatejson-v4", false},
 	}
 
-	reg := regexp.MustCompile(strictSemverReg)
-	var got bool
-	for _, v := range tests {
-		t.Run(title(t, v), func(t *testing.T) {
-			got = reg.MatchString(v.ver)
-			assert.Equal(t, v.valid, got)
-		})
+	for _, tc := range tests {
+		_, err := NewSemverStr(tc.version)
+		if tc.err {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
 	}
 }
 
 func TestNewSemver(t *testing.T) {
-	tests := []semvert{
-		{true, "foo", "", "", 0, 0, 0},
-		{false, "0.0.4", "", "", 0, 0, 4},
-		{false, "1.2.3", "", "", 1, 2, 3},
-		{false, "v0.0.4", "", "", 0, 0, 4},
-		{false, "10.20.30", "", "", 10, 20, 30},
-		{false, "1.1.2-prerelease+meta", "prerelease", "meta", 1, 1, 2},
-		{false, "v1.1.2-prerelease+meta", "prerelease", "meta", 1, 1, 2},
-		{false, "1.1.2+meta", "", "meta", 1, 1, 2},
-		{false, "1.1.2+meta-valid", "", "meta-valid", 1, 1, 2},
-		{false, "1.1.2-alpha", "alpha", "", 1, 1, 2},
-		{false, "1.1.2-beta", "beta", "", 1, 1, 2},
-		{false, "1.1.2-alpha.beta", "alpha.beta", "", 1, 1, 2},
-		{false, "1.1.2-alpha.beta.1", "alpha.beta.1", "", 1, 1, 2},
-		{false, "1.1.2-alpha-a.b-c-somethinglong+build.1-aef.1-its-okay", "alpha-a.b-c-somethinglong", "build.1-aef.1-its-okay", 1, 1, 2},
-		{false, "1.1.2-rc.1+build.1", "rc.1", "build.1", 1, 1, 2},
-		{false, "1.1.2-DEV-SNAPSHOT", "DEV-SNAPSHOT", "", 1, 1, 2},
-		{false, "1.1.2-SNAPSHOT-123", "SNAPSHOT-123", "", 1, 1, 2},
-		{false, "1.1.2+build.1848", "", "build.1848", 1, 1, 2},
-		{false, "1.1.2----RC-SNAPSHOT.12.9.1--.12+788", "---RC-SNAPSHOT.12.9.1--.12", "788", 1, 1, 2},
-		{false, "1.1.2----R-S.12.9.1--.12+meta", "---R-S.12.9.1--.12", "meta", 1, 1, 2},
-		{false, "1.1.2----RC-SNAPSHOT.12.9.1--.12", "---RC-SNAPSHOT.12.9.1--.12", "", 1, 1, 2},
-		{false, "1", "", "", 1, 0, 0},
-		{false, "1.2", "", "", 1, 2, 0},
-		{false, "1.1----R-S.12.9.1--.12+meta", "---R-S.12.9.1--.12", "meta", 1, 1, 0},
-		{false, "1.1----RC-SNAPSHOT.12.9.1--.12", "---RC-SNAPSHOT.12.9.1--.12", "", 1, 1, 0},
-		{false, "1----R-S.12.9.1--.12+meta", "---R-S.12.9.1--.12", "meta", 1, 0, 0},
-		{false, "1----RC-SNAPSHOT.12.9.1--.12", "---RC-SNAPSHOT.12.9.1--.12", "", 1, 0, 0},
+	// v0.1.2
+	v := NewSemver(0, 1, 2, "", "")
+	assert.Equal(t, "0.1.2", v.String())
+
+	// v1.2.3-alpha.1+foo.bar
+	v = NewSemver(1, 2, 3, "alpha.1", "foo.bar")
+	assert.Equal(t, "1.2.3-alpha.1+foo.bar", v.String())
+}
+
+func TestOriginal(t *testing.T) {
+	tests := []string{
+		"1.2.3",
+		"v1.2.3",
+		"1.0",
+		"v1.0",
+		"1",
+		"v1",
+		"1.2-5",
+		"v1.2-5",
+		"1.2-beta.5",
+		"v1.2-beta.5",
+		"1.2.0-x.Y.0+metadata",
+		"v1.2.0-x.Y.0+metadata",
+		"1.2.0-x.Y.0+metadata-width-hypen",
+		"v1.2.0-x.Y.0+metadata-width-hypen",
+		"1.2.3-rc1-with-hypen",
+		"v1.2.3-rc1-with-hypen",
 	}
 
-	var got *Semver
-	var err error
-	for _, v := range tests {
-		t.Run(fmt.Sprintf("%s should be %v", v.ver, v.err), func(t *testing.T) {
-			got, err = NewSemver(v.ver)
-			if v.err {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, v.major, got.Major())
-				assert.Equal(t, v.minor, got.Minor())
-				assert.Equal(t, v.patch, got.Patch())
-				assert.Equal(t, v.pre, got.Prerelease())
-				assert.Equal(t, v.meta, got.Metadata())
-			}
-		})
+	for _, tc := range tests {
+		v, err := NewSemverStr(tc)
+		assert.NoError(t, err)
+
+		o := v.Original()
+		assert.Equal(t, tc, o)
+	}
+}
+
+func TestParts(t *testing.T) {
+	v, err := NewSemverStr("1.2.3-beta.1+build.123")
+	assert.NoError(t, err)
+
+	assert.Equal(t, uint64(1), v.Major())
+	assert.Equal(t, uint64(2), v.Minor())
+	assert.Equal(t, uint64(3), v.Patch())
+	assert.Equal(t, "beta.1", v.Prerelease())
+	assert.Equal(t, "build.123", v.Metadata())
+}
+
+func TestCoerceString(t *testing.T) {
+	tests := []struct {
+		version  string
+		expected string
+	}{
+		{"1.2.3", "1.2.3"},
+		{"v1.2.3", "1.2.3"},
+		{"1.0", "1.0.0"},
+		{"v1.0", "1.0.0"},
+		{"1", "1.0.0"},
+		{"v1", "1.0.0"},
+		{"1.2-5", "1.2.0-5"},
+		{"v1.2-5", "1.2.0-5"},
+		{"1.2-beta.5", "1.2.0-beta.5"},
+		{"v1.2-beta.5", "1.2.0-beta.5"},
+		{"1.2.0-x.Y.0+metadata", "1.2.0-x.Y.0+metadata"},
+		{"v1.2.0-x.Y.0+metadata", "1.2.0-x.Y.0+metadata"},
+		{"1.2.0-x.Y.0+metadata-width-hypen", "1.2.0-x.Y.0+metadata-width-hypen"},
+		{"v1.2.0-x.Y.0+metadata-width-hypen", "1.2.0-x.Y.0+metadata-width-hypen"},
+		{"1.2.3-rc1-with-hypen", "1.2.3-rc1-with-hypen"},
+		{"v1.2.3-rc1-with-hypen", "1.2.3-rc1-with-hypen"},
+	}
+
+	for _, tc := range tests {
+		v, err := NewSemverStr(tc.version)
+		assert.NoError(t, err)
+
+		s := v.String()
+		assert.Equal(t, tc.expected, s)
 	}
 }
 
@@ -188,12 +161,12 @@ func TestSemverGt(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		v1, err := NewSemver(tc.v1)
+		v1, err := NewSemverStr(tc.v1)
 		if err != nil {
 			t.Errorf("Error parsing version: %s", err)
 		}
 
-		v2, err := NewSemver(tc.v2)
+		v2, err := NewSemverStr(tc.v2)
 		if err != nil {
 			t.Errorf("Error parsing version: %s", err)
 		}
@@ -215,12 +188,12 @@ func TestSemverLt(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		v1, err := NewSemver(tc.v1)
+		v1, err := NewSemverStr(tc.v1)
 		if err != nil {
 			t.Errorf("Error parsing version: %s", err)
 		}
 
-		v2, err := NewSemver(tc.v2)
+		v2, err := NewSemverStr(tc.v2)
 		if err != nil {
 			t.Errorf("Error parsing version: %s", err)
 		}
@@ -243,12 +216,12 @@ func TestSemverEq(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		v1, err := NewSemver(tc.v1)
+		v1, err := NewSemverStr(tc.v1)
 		if err != nil {
 			t.Errorf("Error parsing version: %s", err)
 		}
 
-		v2, err := NewSemver(tc.v2)
+		v2, err := NewSemverStr(tc.v2)
 		if err != nil {
 			t.Errorf("Error parsing version: %s", err)
 		}
@@ -285,12 +258,12 @@ func TestCompare(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		v1, err := NewSemver(tc.v1)
+		v1, err := NewSemverStr(tc.v1)
 		if err != nil {
 			t.Errorf("Error parsing version: %s", err)
 		}
 
-		v2, err := NewSemver(tc.v2)
+		v2, err := NewSemverStr(tc.v2)
 		if err != nil {
 			t.Errorf("Error parsing version: %s", err)
 		}
@@ -299,7 +272,66 @@ func TestCompare(t *testing.T) {
 		assert.Equal(t, a, tc.expected)
 	}
 }
-func title(t *testing.T, r regt) string {
-	t.Helper()
-	return fmt.Sprintf("%s should be %v", r.ver, r.valid)
+
+func TestInc(t *testing.T) {
+	tests := []struct {
+		v1               string
+		expected         string
+		how              string
+		expectedOriginal string
+	}{
+		{"1.2.3", "1.2.4", "patch", "1.2.4"},
+		{"v1.2.4", "1.2.5", "patch", "v1.2.5"},
+		{"1.2.3", "1.3.0", "minor", "1.3.0"},
+		{"v1.2.4", "1.3.0", "minor", "v1.3.0"},
+		{"1.2.3", "2.0.0", "major", "2.0.0"},
+		{"v1.2.4", "2.0.0", "major", "v2.0.0"},
+		{"1.2.3+meta", "1.2.4", "patch", "1.2.4"},
+		{"1.2.3-beta+meta", "1.2.3", "patch", "1.2.3"},
+		{"v1.2.4-beta+meta", "1.2.4", "patch", "v1.2.4"},
+		{"1.2.3-beta+meta", "1.3.0", "minor", "1.3.0"},
+		{"v1.2.4-beta+meta", "1.3.0", "minor", "v1.3.0"},
+		{"1.2.3-beta+meta", "2.0.0", "major", "2.0.0"},
+		{"v1.2.4-beta+meta", "2.0.0", "major", "v2.0.0"},
+	}
+
+	for _, tc := range tests {
+		v1, err := NewSemverStr(tc.v1)
+		if err != nil {
+			t.Errorf("Error parsing version: %s", err)
+		}
+		var v2 Comparable
+		switch tc.how {
+		case "patch":
+			v2 = v1.IncPatch()
+		case "minor":
+			v2 = v1.IncMinor()
+		case "major":
+			v2 = v1.IncMajor()
+		}
+
+		// a := v2.String()
+		// assert.Equal(t, tc.expected, a)
+
+		sem, ok := v2.(*Semver)
+		assert.True(t, ok)
+		a := sem.Original()
+		assert.Equal(t, tc.expectedOriginal, a)
+	}
+}
+
+func TestOriginalVPrefix(t *testing.T) {
+	tests := []struct {
+		version string
+		vprefix string
+	}{
+		{"1.2.3", ""},
+		{"v1.2.4", "v"},
+	}
+
+	for _, tc := range tests {
+		v1, _ := NewSemverStr(tc.version)
+		a := v1.originalVPrefix()
+		assert.Equal(t, tc.vprefix, a)
+	}
 }
