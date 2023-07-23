@@ -4,6 +4,25 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/shipengqi/golib/strutil"
+)
+
+const (
+	OperatorGte   = ">="
+	OperatorGt    = ">"
+	OperatorLte   = "<="
+	OperatorLt    = "<"
+	OperatorEq    = "="
+	OperatorRange = " - "
+	OperatorCaret = "^"
+	OperatorTilde = "~"
+)
+
+const (
+	VersionAll      = "*"
+	VersionMinimum  = "0.0.0"
+	VersionAllAlias = OperatorGte + VersionMinimum
 )
 
 var operatorsMap map[string]operation
@@ -23,6 +42,9 @@ type New func(string) (Comparable, error)
 // NewConstraint returns a Constraints instance that a Comparable instance can
 // be checked against. If there is a parse error it will be returned.
 func NewConstraint(c string, fn New) (*Constraints, error) {
+	if strutil.IsEmpty(c) {
+		return nil, ErrInvalidConstraint
+	}
 	groups := strings.Split(c, "||")
 	gcs := make([][]*constraint, len(groups))
 
@@ -38,6 +60,18 @@ func NewConstraint(c string, fn New) (*Constraints, error) {
 }
 
 func (c *Constraints) Check(ver Comparable) bool {
+	return c.check(ver)
+}
+
+func (c *Constraints) CheckString(ver string) (bool, error) {
+	com, err := c.newfn(ver)
+	if err != nil {
+		return false, err
+	}
+	return c.check(com), nil
+}
+
+func (c *Constraints) check(ver Comparable) bool {
 	for _, v := range c.constraints {
 		joy := true
 		for _, v2 := range v {
@@ -54,25 +88,15 @@ func (c *Constraints) Check(ver Comparable) bool {
 	return false
 }
 
-// func (c *Constraints) CheckString(ver string) bool {
-// 	for _, v := range c.constraints {
-// 		for _, v2 := range v {
-// 			operatorsMap[v2.operator]()
-// 		}
-// 	}
-//
-// 	return false
-// }
-
 func parseConstraintGroup(group string, fn New, result *[]*constraint) error {
-	if strings.Contains(group, " - ") {
-		gs := strings.Split(group, " - ")
+	if strings.Contains(group, OperatorRange) {
+		gs := strings.Split(group, OperatorRange)
 		if len(gs) > 1 {
-			err := parseConstraintGroup(">="+gs[0], fn, result)
+			err := parseConstraintGroup(OperatorGte+gs[0], fn, result)
 			if err != nil {
 				return err
 			}
-			err = parseConstraintGroup("<="+gs[1], fn, result)
+			err = parseConstraintGroup(OperatorLte+gs[1], fn, result)
 			if err != nil {
 				return err
 			}
@@ -88,6 +112,9 @@ func parseConstraintGroup(group string, fn New, result *[]*constraint) error {
 			}
 		}
 	} else {
+		if group == VersionAll || strings.HasPrefix(group, VersionAll) {
+			group = VersionAllAlias
+		}
 		group = strings.ReplaceAll(group, "x", "0")
 		cons, err := parseConstraint(group, fn)
 		if err != nil {
@@ -113,7 +140,7 @@ func init() {
 	}
 
 	ops := `\^|>=|<=|!=|!|>|<|~|=`
-	allowed := `\w\.\+-`
+	allowed := `\w\.\+\*-`
 	findConstraintRegex = regexp.MustCompile(fmt.Sprintf(
 		`^(%s)?([%s]+)$`, ops, allowed))
 }
@@ -139,34 +166,40 @@ func parseConstraint(c string, fn New) ([]*constraint, error) {
 	var err error
 	found := findConstraintRegex.FindStringSubmatch(c)
 	if len(found) == 0 {
-		op = "="
+		op = OperatorEq
 		ver = c
 	} else if len(found) == 2 {
-		op = "="
+		op = OperatorEq
 		ver = found[1]
 	} else if len(found) > 2 {
 		op = found[1]
 		if op == "" {
-			op = "="
+			op = OperatorEq
 		}
 		ver = found[2]
 	} else {
 		return nil, ErrInvalidConstraint
 	}
 
-	if op == "^" {
+	if op == OperatorCaret {
 		result, err = parseCaretConstraint(ver, fn)
 		if err != nil {
 			return nil, err
 		}
-	} else if op == "~" {
+	} else if op == OperatorTilde {
 		result, err = parseTildeConstraint(ver, fn)
 		if err != nil {
 			return nil, err
 		}
+	} else if strings.Contains(ver, VersionAll) {
+		result, err = parseStarConstraint(ver, fn)
+		if err != nil {
+			return nil, err
+		}
 	} else {
-		if ver == "*" {
-			ver = "0.0.0"
+		if ver == VersionAll {
+			op = OperatorGte
+			ver = VersionMinimum
 		}
 		com, err := fn(ver)
 		if err != nil {
@@ -222,12 +255,22 @@ func parseCaretConstraint(ver string, fn New) ([]*constraint, error) {
 		max = ori.IncMajor()
 	} else if ori.Minor() > 0 {
 		max = ori.IncMinor()
-	} else {
+	} else if ori.Patch() > 0 {
 		max = ori.IncPatch()
+	} else {
+		// version is ^0.0.0
+		vs := strings.Split(ver, ".")
+		if len(vs) == 1 {
+			max = ori.IncMajor()
+		} else if len(vs) == 2 {
+			max = ori.IncMinor()
+		} else {
+			max = ori.IncPatch()
+		}
 	}
 	result = append(result,
-		&constraint{version: ori.Version(), operator: ">=", com: ori},
-		&constraint{version: max.Version(), operator: "<", com: max},
+		&constraint{version: ori.Version(), operator: OperatorGte, com: ori},
+		&constraint{version: max.Version(), operator: OperatorLt, com: max},
 	)
 	return result, nil
 }
@@ -250,8 +293,48 @@ func parseTildeConstraint(ver string, fn New) ([]*constraint, error) {
 		max = ori.IncMinor()
 	}
 	result = append(result,
-		&constraint{version: ori.Version(), operator: ">=", com: ori},
-		&constraint{version: max.Version(), operator: "<", com: max},
+		&constraint{version: ori.Version(), operator: OperatorGte, com: ori},
+		&constraint{version: max.Version(), operator: OperatorLt, com: max},
+	)
+	return result, nil
+}
+
+// 2.*    -->  >=2.0.0, <3.0.0
+// 2.1.*  -->  >=2.1.0, <2.2.0
+func parseStarConstraint(ver string, fn New) ([]*constraint, error) {
+	var result []*constraint
+	var minorall, patchall bool
+	vs := strings.Split(ver, ".")
+	if len(vs) == 1 {
+		ver = VersionMinimum
+	} else if len(vs) == 2 {
+		if vs[1] == VersionAll {
+			vs[1] = "0"
+			minorall = true
+		}
+	} else if len(vs) > 2 {
+		if vs[1] == VersionAll {
+			minorall = true
+			vs[1] = "0"
+		} else if vs[2] == VersionAll {
+			vs[2] = "0"
+			patchall = true
+		}
+	}
+	ver = strings.Join(vs, ".")
+	ori, err := fn(ver)
+	if err != nil {
+		return nil, err
+	}
+	var max Comparable
+	if minorall {
+		max = ori.IncMajor()
+	} else if patchall {
+		max = ori.IncMinor()
+	}
+	result = append(result,
+		&constraint{version: ori.Version(), operator: OperatorGte, com: ori},
+		&constraint{version: max.Version(), operator: OperatorLt, com: max},
 	)
 	return result, nil
 }

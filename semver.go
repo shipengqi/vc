@@ -15,10 +15,6 @@ const (
 	semverReg string = `^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
 		`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
 		`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$`
-	strictSemverReg = `^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)` +
-		`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)` +
-		`(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))` +
-		`?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`
 	allowedNum   = "0123456789"
 	allowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-" + allowedNum
 )
@@ -40,78 +36,7 @@ type Semver struct {
 	original            string
 }
 
-// StrictNewVersion parses a given version and returns an instance of Version or
-// an error if unable to parse the version. Only parses valid semantic versions.
-// Performs checking that can find errors within the version.
-// If you want to coerce a version such as 1 or 1.2 and parse it as the 1.x
-// releases of semver did, use the NewVersion() function.
-func StrictNewVersion(ver string) (*Semver, error) {
-	valid := versionRegex.MatchString(ver)
-	if !valid {
-		return nil, ErrInvalidSemVer
-	}
-
-	m := versionRegex.FindStringSubmatch(ver)
-	if m == nil {
-		return nil, ErrInvalidSemVer
-	}
-
-	sv := &Semver{
-		metadata: m[5],
-		pre:      m[4],
-		original: ver,
-	}
-
-	var err error
-	sv.major, err = strconv.ParseUint(m[1], 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("parsing version segment: %s", err)
-	}
-	if m[2] != "" {
-		sv.minor, err = strconv.ParseUint(strings.TrimPrefix(m[2], "."), 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("parsing version segment: %s", err)
-		}
-	} else {
-		sv.minor = 0
-	}
-
-	if m[3] != "" {
-		sv.patch, err = strconv.ParseUint(strings.TrimPrefix(m[3], "."), 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("parsing version segment: %s", err)
-		}
-	} else {
-		sv.patch = 0
-	}
-
-	// Perform some basic due diligence on the extra parts to ensure they are
-	// valid.
-
-	if sv.pre != "" {
-		if err = validatePrerelease(sv.pre); err != nil {
-			return nil, err
-		}
-	}
-
-	if sv.metadata != "" {
-		if err = validateMetadata(sv.metadata); err != nil {
-			return nil, err
-		}
-	}
-
-	return sv, nil
-}
-
-// NewSemver parses a given version and returns an instance of Semver or
-// an error if unable to parse the version. If the version is SemVer-ish it
-// attempts to convert it to SemVer.
-func NewSemver(ver string) (*Semver, error) {
-	// valid := versionRegex.MatchString(ver)
-	// if !valid {
-	// 	return nil, ErrInvalidSemVer
-	// }
-
+func NewSemverStr(ver string) (*Semver, error) {
 	m := versionRegex.FindStringSubmatch(ver)
 	if m == nil {
 		return nil, ErrInvalidSemVer
@@ -162,6 +87,23 @@ func NewSemver(ver string) (*Semver, error) {
 	}
 
 	return sv, nil
+}
+
+// NewSemver creates a new instance of Semver with each of the parts passed in as
+// arguments instead of parsing a version string.
+func NewSemver(major, minor, patch uint64, pre, metadata string) *Semver {
+	v := Semver{
+		major:    major,
+		minor:    minor,
+		patch:    patch,
+		pre:      pre,
+		metadata: metadata,
+		original: "",
+	}
+
+	v.original = v.String()
+
+	return &v
 }
 
 // String converts a Version object to a string.
@@ -267,6 +209,7 @@ func (v *Semver) IncPatch() Comparable {
 	if v.pre != "" {
 		vNext.metadata = ""
 		vNext.pre = ""
+		vNext.patch = v.patch
 	} else {
 		vNext.metadata = ""
 		vNext.pre = ""
