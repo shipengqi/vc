@@ -56,7 +56,7 @@ func NewConstraint(c string, fn New) (*Constraints, error) {
 		}
 		gcs[k] = result
 	}
-	return &Constraints{constraints: gcs}, nil
+	return &Constraints{constraints: gcs, newfn: fn}, nil
 }
 
 func (c *Constraints) Check(ver Comparable) bool {
@@ -89,8 +89,13 @@ func (c *Constraints) check(ver Comparable) bool {
 }
 
 func parseConstraintGroup(group string, fn New, result *[]*constraint) error {
+	group = strings.TrimSpace(group)
 	if strings.Contains(group, OperatorRange) {
 		gs := strings.Split(group, OperatorRange)
+		// Contains more than one " - "
+		if len(gs) > 2 {
+			return ErrInvalidConstraint
+		}
 		if len(gs) > 1 {
 			err := parseConstraintGroup(OperatorGte+gs[0], fn, result)
 			if err != nil {
@@ -115,7 +120,6 @@ func parseConstraintGroup(group string, fn New, result *[]*constraint) error {
 		if group == VersionAll || strings.HasPrefix(group, VersionAll) {
 			group = VersionAllAlias
 		}
-		group = strings.ReplaceAll(group, "x", "0")
 		cons, err := parseConstraint(group, fn)
 		if err != nil {
 			return err
@@ -157,6 +161,9 @@ type constraint struct {
 }
 
 func parseConstraint(c string, fn New) ([]*constraint, error) {
+	// replace x to 0
+	c = strings.ReplaceAll(c, "x", "0")
+
 	valid := findConstraintRegex.MatchString(c)
 	if !valid {
 		return nil, ErrInvalidConstraint
@@ -182,17 +189,17 @@ func parseConstraint(c string, fn New) ([]*constraint, error) {
 	}
 
 	if op == OperatorCaret {
-		result, err = parseCaretConstraint(ver, fn)
+		result, err = parseCaretConstraint(c, ver, fn)
 		if err != nil {
 			return nil, err
 		}
 	} else if op == OperatorTilde {
-		result, err = parseTildeConstraint(ver, fn)
+		result, err = parseTildeConstraint(c, ver, fn)
 		if err != nil {
 			return nil, err
 		}
 	} else if strings.Contains(ver, VersionAll) {
-		result, err = parseStarConstraint(ver, fn)
+		result, err = parseStarConstraint(c, ver, fn)
 		if err != nil {
 			return nil, err
 		}
@@ -244,7 +251,7 @@ func constraintLessThanEqual(ver Comparable, c *constraint) bool {
 // ^0      -->  >=0.0.0 <1.0.0
 // ^0.x    -->  >=0.0.0 <1.0.0
 // ^1.x    -->  >=1.0.0 <2.0.0
-func parseCaretConstraint(ver string, fn New) ([]*constraint, error) {
+func parseCaretConstraint(original, ver string, fn New) ([]*constraint, error) {
 	var result []*constraint
 	ori, err := fn(ver)
 	if err != nil {
@@ -269,8 +276,8 @@ func parseCaretConstraint(ver string, fn New) ([]*constraint, error) {
 		}
 	}
 	result = append(result,
-		&constraint{version: ori.Version(), operator: OperatorGte, com: ori},
-		&constraint{version: max.Version(), operator: OperatorLt, com: max},
+		&constraint{version: ori.Version(), operator: OperatorGte, com: ori, original: original},
+		&constraint{version: max.Version(), operator: OperatorLt, com: max, original: original},
 	)
 	return result, nil
 }
@@ -280,7 +287,7 @@ func parseCaretConstraint(ver string, fn New) ([]*constraint, error) {
 // ~1.2, ~1.2.x      -->  >=1.2.0, <1.3.0
 // ~1.2.3,           -->  >=1.2.3, <1.3.0
 // ~1.2.0            -->  >=1.2.0, <1.3.0
-func parseTildeConstraint(ver string, fn New) ([]*constraint, error) {
+func parseTildeConstraint(original, ver string, fn New) ([]*constraint, error) {
 	var result []*constraint
 	ori, err := fn(ver)
 	if err != nil {
@@ -293,15 +300,15 @@ func parseTildeConstraint(ver string, fn New) ([]*constraint, error) {
 		max = ori.IncMinor()
 	}
 	result = append(result,
-		&constraint{version: ori.Version(), operator: OperatorGte, com: ori},
-		&constraint{version: max.Version(), operator: OperatorLt, com: max},
+		&constraint{version: ori.Version(), operator: OperatorGte, com: ori, original: original},
+		&constraint{version: max.Version(), operator: OperatorLt, com: max, original: original},
 	)
 	return result, nil
 }
 
 // 2.*    -->  >=2.0.0, <3.0.0
 // 2.1.*  -->  >=2.1.0, <2.2.0
-func parseStarConstraint(ver string, fn New) ([]*constraint, error) {
+func parseStarConstraint(original, ver string, fn New) ([]*constraint, error) {
 	var result []*constraint
 	var minorall, patchall bool
 	vs := strings.Split(ver, ".")
@@ -333,8 +340,8 @@ func parseStarConstraint(ver string, fn New) ([]*constraint, error) {
 		max = ori.IncMinor()
 	}
 	result = append(result,
-		&constraint{version: ori.Version(), operator: OperatorGte, com: ori},
-		&constraint{version: max.Version(), operator: OperatorLt, com: max},
+		&constraint{version: ori.Version(), operator: OperatorGte, com: ori, original: original},
+		&constraint{version: max.Version(), operator: OperatorLt, com: max, original: original},
 	)
 	return result, nil
 }
