@@ -3,6 +3,8 @@ package vc
 import (
 	"strconv"
 	"strings"
+
+	"github.com/shipengqi/golib/strutil"
 )
 
 // Comparable An implementation of Comparable interface can be compared with constraints.
@@ -181,4 +183,37 @@ func comparePrePart(s, o string) int {
 		return 1
 	}
 	return -1
+}
+
+// From the spec, "Identifiers MUST comprise only
+// ASCII alphanumerics and hyphen [0-9A-Za-z-]. Identifiers MUST NOT be empty.
+// Numeric identifiers MUST NOT include leading zeroes.". These segments can
+// be dot separated.
+func validatePrerelease(p string) error {
+	eparts := strings.Split(p, ".")
+	for _, p := range eparts {
+		if strutil.ContainsOnly(p, allowedNum) {
+			if len(p) > 1 && p[0] == '0' {
+				return ErrSegmentStartsZero
+			}
+		} else if !strutil.ContainsOnly(p, allowedChars) {
+			return ErrInvalidPrerelease
+		}
+	}
+
+	return nil
+}
+
+// From the spec, "Build metadata MAY be denoted by
+// appending a plus sign and a series of dot separated identifiers immediately
+// following the patch or pre-release version. Identifiers MUST comprise only
+// ASCII alphanumerics and hyphen [0-9A-Za-z-]. Identifiers MUST NOT be empty."
+func validateMetadata(m string) error {
+	eparts := strings.Split(m, ".")
+	for _, p := range eparts {
+		if !strutil.ContainsOnly(p, allowedChars) {
+			return ErrInvalidMetadata
+		}
+	}
+	return nil
 }
