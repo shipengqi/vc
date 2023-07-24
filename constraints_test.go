@@ -404,3 +404,35 @@ func TestConstraintsCheckString(t *testing.T) {
 		}
 	}
 }
+
+func TestConstraintsCheckCalVerString(t *testing.T) {
+	tests := []struct {
+		con   string
+		ver   string
+		valid bool
+	}{
+		{">2023.1 <2023.6", "2023.5", true},
+		{">2023.1 <2024", "2023.9", true},
+		{">=2023.1 <2024 !=2023.5", "2023.9", true},
+		{">=2023.1 <2024 !=2023.5", "2023.5", false},
+		{">=2023.1 <2024 !=2023.5", "2024.1", false},
+		{">2023.1.1 <2023.6", "2023.1.2", true},
+		{">2023.1.10 <2024", "2023.1.10", false},
+		{">=2023.1 <2024 !=2023.5 || >2025", "2025.1", true},
+		{"2023.1 - 2024", "2023.5", true},
+		{"2023.1 - 2025", "2024.5", true},
+		{"2023.1 - 2025 <=2024", "2023.5", true},
+	}
+
+	for _, tc := range tests {
+		c, err := NewConstraint(tc.con, func(s string) (Comparable, error) {
+			return NewCalVerStr(s)
+		})
+		assert.NoError(t, err)
+		a, err := c.CheckString(tc.ver)
+		assert.NoError(t, err)
+		if a != tc.valid {
+			t.Errorf("Constraint '%s' failing with '%s'", tc.con, tc.ver)
+		}
+	}
+}

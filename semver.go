@@ -6,8 +6,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/shipengqi/golib/strutil"
 )
 
 const (
@@ -36,6 +34,9 @@ type Semver struct {
 	original            string
 }
 
+// NewSemverStr parses a given version and returns an instance of Semver or
+// an error if unable to parse the version. If the version is SemVer-ish it
+// attempts to convert it to Semver.
 func NewSemverStr(ver string) (*Semver, error) {
 	m := versionRegex.FindStringSubmatch(ver)
 	if m == nil {
@@ -106,7 +107,7 @@ func NewSemver(major, minor, patch uint64, pre, metadata string) *Semver {
 	return &v
 }
 
-// String converts a Version object to a string.
+// String converts a Semver object to a string.
 // Note, if the original version contained a leading v this version will not.
 // See the Original() method to retrieve the original value. Semantic Versions
 // don't contain a leading v per the spec. Instead, it's optional on
@@ -256,37 +257,4 @@ func (v *Semver) originalVPrefix() string {
 		return "v"
 	}
 	return ""
-}
-
-// From the spec, "Identifiers MUST comprise only
-// ASCII alphanumerics and hyphen [0-9A-Za-z-]. Identifiers MUST NOT be empty.
-// Numeric identifiers MUST NOT include leading zeroes.". These segments can
-// be dot separated.
-func validatePrerelease(p string) error {
-	eparts := strings.Split(p, ".")
-	for _, p := range eparts {
-		if strutil.ContainsOnly(p, allowedNum) {
-			if len(p) > 1 && p[0] == '0' {
-				return ErrSegmentStartsZero
-			}
-		} else if !strutil.ContainsOnly(p, allowedChars) {
-			return ErrInvalidPrerelease
-		}
-	}
-
-	return nil
-}
-
-// From the spec, "Build metadata MAY be denoted by
-// appending a plus sign and a series of dot separated identifiers immediately
-// following the patch or pre-release version. Identifiers MUST comprise only
-// ASCII alphanumerics and hyphen [0-9A-Za-z-]. Identifiers MUST NOT be empty."
-func validateMetadata(m string) error {
-	eparts := strings.Split(m, ".")
-	for _, p := range eparts {
-		if !strutil.ContainsOnly(p, allowedChars) {
-			return ErrInvalidMetadata
-		}
-	}
-	return nil
 }

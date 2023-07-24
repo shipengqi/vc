@@ -7,6 +7,10 @@ var (
 	// being parsed.
 	ErrInvalidSemVer = errors.New("invalid semantic version")
 
+	// ErrInvalidCalVer is returned a version is found to be invalid when
+	// being parsed.
+	ErrInvalidCalVer = errors.New("invalid calendar version")
+
 	// ErrInvalidConstraint is returned a constraint is found to be invalid when
 	// being parsed.
 	ErrInvalidConstraint = errors.New("invalid constraint")
