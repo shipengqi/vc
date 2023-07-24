@@ -189,3 +189,24 @@ func (v *CalVer) IncPatch() Comparable {
 	vNext.original = vNext.String()
 	return vNext
 }
+
+// Lt tests if one version is less than another one.
+func (v *CalVer) Lt(o *CalVer) bool {
+	return v.Compare(o) < 0
+}
+
+// Gt tests if one version is greater than another one.
+func (v *CalVer) Gt(o *CalVer) bool {
+	return v.Compare(o) > 0
+}
+
+// Eq tests if two versions are equal to each other.
+func (v *CalVer) Eq(o *CalVer) bool {
+	return v.Compare(o) == 0
+}
+
+// Compare compares this version to another CalVer. It returns -1, 0, or 1 if
+// the version smaller, equal, or larger than the other version.
+func (v *CalVer) Compare(o *CalVer) int {
+	return Compare(v, o)
+}

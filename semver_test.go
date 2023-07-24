@@ -310,9 +310,6 @@ func TestInc(t *testing.T) {
 			v2 = v1.IncMajor()
 		}
 
-		// a := v2.String()
-		// assert.Equal(t, tc.expected, a)
-
 		sem, ok := v2.(*Semver)
 		assert.True(t, ok)
 		a := sem.Original()
