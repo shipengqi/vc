@@ -21,6 +21,7 @@ const (
 
 const (
 	VersionAll      = "*"
+	VersionX        = "x"
 	VersionMinimum  = "0.0.0"
 	VersionAllAlias = OperatorGte + VersionMinimum
 )
@@ -162,7 +163,7 @@ type constraint struct {
 
 func parseConstraint(c string, fn New) ([]*constraint, error) {
 	// replace x to 0
-	c = strings.ReplaceAll(c, "x", "0")
+	// c = strings.ReplaceAll(c, "x", "0")
 
 	valid := findConstraintRegex.MatchString(c)
 	if !valid {
@@ -198,7 +199,7 @@ func parseConstraint(c string, fn New) ([]*constraint, error) {
 		if err != nil {
 			return nil, err
 		}
-	} else if strings.Contains(ver, VersionAll) {
+	} else if strings.Contains(ver, VersionAll) || strings.Contains(ver, "x") {
 		result, err = parseStarConstraint(c, ver, fn)
 		if err != nil {
 			return nil, err
@@ -253,6 +254,8 @@ func constraintLessThanEqual(ver Comparable, c *constraint) bool {
 // ^1.x    -->  >=1.0.0 <2.0.0
 func parseCaretConstraint(original, ver string, fn New) ([]*constraint, error) {
 	var result []*constraint
+	ver = strings.ReplaceAll(ver, VersionX, "0")
+
 	ori, err := fn(ver)
 	if err != nil {
 		return nil, err
@@ -289,6 +292,7 @@ func parseCaretConstraint(original, ver string, fn New) ([]*constraint, error) {
 // ~1.2.0            -->  >=1.2.0, <1.3.0
 func parseTildeConstraint(original, ver string, fn New) ([]*constraint, error) {
 	var result []*constraint
+	ver = strings.ReplaceAll(ver, VersionX, "0")
 	ori, err := fn(ver)
 	if err != nil {
 		return nil, err
@@ -315,15 +319,15 @@ func parseStarConstraint(original, ver string, fn New) ([]*constraint, error) {
 	if len(vs) == 1 {
 		ver = VersionMinimum
 	} else if len(vs) == 2 {
-		if vs[1] == VersionAll {
+		if vs[1] == VersionAll || vs[1] == VersionX {
 			vs[1] = "0"
 			minorall = true
 		}
 	} else if len(vs) > 2 {
-		if vs[1] == VersionAll {
+		if vs[1] == VersionAll || vs[1] == VersionX {
 			minorall = true
 			vs[1] = "0"
-		} else if vs[2] == VersionAll {
+		} else if vs[2] == VersionAll || vs[2] == VersionX {
 			vs[2] = "0"
 			patchall = true
 		}

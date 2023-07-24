@@ -56,6 +56,14 @@ func TestParseConstraint(t *testing.T) {
 			{version: "1.5.0", operator: ">=", original: "^1.5"},
 			{version: "2.0.0", operator: "<", original: "^1.5"},
 		}, false},
+		{"^0", []*constraint{
+			{version: "0.0.0", operator: ">=", original: "^0"},
+			{version: "1.0.0", operator: "<", original: "^0"},
+		}, false},
+		{"^0.0", []*constraint{
+			{version: "0.0.0", operator: ">=", original: "^0.0"},
+			{version: "0.1.0", operator: "<", original: "^0.0"},
+		}, false},
 	}
 	for _, tc := range tests {
 		c, err := parseConstraint(tc.in, func(ver string) (Comparable, error) {
@@ -126,6 +134,14 @@ func TestParseConstraintGroup(t *testing.T) {
 			{version: "0.0.2", operator: ">=", original: "~0.0.2"},
 			{version: "0.1.0", operator: "<", original: "~0.0.2"},
 		}, false},
+		{"~1.x", []*constraint{
+			{version: "1.0.0", operator: ">=", original: "~1.x"},
+			{version: "2.0.0", operator: "<", original: "~1.x"},
+		}, false},
+		{"~1.2.x", []*constraint{
+			{version: "1.2.0", operator: ">=", original: "~1.2.x"},
+			{version: "1.3.0", operator: "<", original: "~1.2.x"},
+		}, false},
 		{"^1.5", []*constraint{
 			{version: "1.5.0", operator: ">=", original: "^1.5"},
 			{version: "2.0.0", operator: "<", original: "^1.5"},
@@ -155,12 +171,20 @@ func TestParseConstraintGroup(t *testing.T) {
 			{version: "0.0.3", operator: "<", original: "^0.0.2"},
 		}, false},
 		{"^0.1.x", []*constraint{
-			{version: "0.1.0", operator: ">=", original: "^0.1.0"},
-			{version: "0.2.0", operator: "<", original: "^0.1.0"},
+			{version: "0.1.0", operator: ">=", original: "^0.1.x"},
+			{version: "0.2.0", operator: "<", original: "^0.1.x"},
 		}, false},
 		{"^1.x.x", []*constraint{
-			{version: "1.0.0", operator: ">=", original: "^1.0.0"},
-			{version: "2.0.0", operator: "<", original: "^1.0.0"},
+			{version: "1.0.0", operator: ">=", original: "^1.x.x"},
+			{version: "2.0.0", operator: "<", original: "^1.x.x"},
+		}, false},
+		{">=1.2.x", []*constraint{
+			{version: "1.2.0", operator: ">=", original: ">=1.2.x"},
+			{version: "1.3.0", operator: "<", original: ">=1.2.x"},
+		}, false},
+		{"<=2.x", []*constraint{
+			{version: "2.0.0", operator: ">=", original: "<=2.x"},
+			{version: "3.0.0", operator: "<", original: "<=2.x"},
 		}, false},
 		{"*", []*constraint{
 			{version: "0.0.0", operator: ">=", original: ">=0.0.0"},

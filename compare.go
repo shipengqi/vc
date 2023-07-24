@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// Comparable An implementation of Comparable interface can be compared with constraints.
 type Comparable interface {
 	// Version converts major,minor and patch to a string.
 	Version() string
