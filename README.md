@@ -21,7 +21,7 @@ v := NewSemver(0, 1, 2, "", "")
 ```go
 v, err := vc.NewCalVerStr("2023.07.05")
 
-v := NewSemver(2023, 7, 5, "", "")
+v := NewCalVer(2023, 7, 5, "")
 ```
 
 ## Constraints
