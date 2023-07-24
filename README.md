@@ -1,6 +1,8 @@
 # vc
 Compare version strings to find greater, equal or lesser. 
-Provides the ability to work with Semantic Versions (http://semver.org) in Go. Inspired by [Masterminds/semver](https://github.com/Masterminds/semver).
+Provides the ability to work with Semantic Versions (http://semver.org) in Go. 
+
+Inspired by [Masterminds/semver](https://github.com/Masterminds/semver).
 
 [![Test](https://github.com/shipengqi/vc/actions/workflows/ci.yaml/badge.svg)](https://github.com/shipengqi/vc/actions/workflows/ci.yaml)
 [![Codecov](https://codecov.io/gh/shipengqi/vc/branch/main/graph/badge.svg?token=SMU4SI304O)](https://codecov.io/gh/shipengqi/vc)
@@ -12,9 +14,17 @@ Provides the ability to work with Semantic Versions (http://semver.org) in Go. I
 ## Semver Versions
 
 ```go
-v, err := vc.NewSemverStr(tc.version)
+v, err := vc.NewSemverStr("0.1.2")
 
 v := NewSemver(0, 1, 2, "", "")
+```
+
+## Calendar Versions
+
+```go
+v, err := vc.NewCalVerStr("2023.07.05")
+
+v := NewCalVer(2023, 7, 5, "")
 ```
 
 ## Constraints
