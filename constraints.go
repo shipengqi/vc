@@ -317,7 +317,7 @@ func parseStarConstraint(original, ver string, fn New) ([]*constraint, error) {
 	var minorall, patchall bool
 	vs := strings.Split(ver, ".")
 	if len(vs) == 1 {
-		ver = VersionMinimum
+		vs = append(vs, "0", "0")
 	} else if len(vs) == 2 {
 		if vs[1] == VersionAll || vs[1] == VersionX {
 			vs[1] = "0"
