@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const calVerReg = `^([0-9]{4})(\.[0-9]{1,2})?(\.[0-9]{1,2})?` +
+const calVerReg = `^([0-9]{4}|[0-9]{2})(\.[0-9]{1,2})?(\.[0-9]{1,2})?` +
 	`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$`
 
 // The compiled version of the regex created at init() is cached here, so it
