@@ -15,6 +15,10 @@ func TestNewCalVer(t *testing.T) {
 	assert.Equal(t, "2023.07.03-alpha.1", v.String())
 	v = NewCalVer(2023, 11, 3, "alpha.1")
 	assert.Equal(t, "2023.11.03-alpha.1", v.String())
+	v = NewCalVer(23, 7, 0, "")
+	assert.Equal(t, "23.07.00", v.String())
+	v = NewCalVer(23, 7, 0, "alpha.1")
+	assert.Equal(t, "23.07.00-alpha.1", v.String())
 }
 
 func TestNewCalVerStr(t *testing.T) {
@@ -27,6 +31,9 @@ func TestNewCalVerStr(t *testing.T) {
 		{"2023.07.03", false},
 		{"2023.11.13", false},
 		{"2023.11.13-alpha", false},
+		{"23.7.23", false},
+		{"23.07.3", false},
+		{"23.11.13-alpha", false},
 		{"2023.11.13-dev+1", true},
 		{"2023.117.23", true},
 		{"202.7.23", true},
