@@ -4,8 +4,9 @@ Provides the ability to work with Semantic Versions (http://semver.org) in Go.
 
 Inspired by [Masterminds/semver](https://github.com/Masterminds/semver).
 
-[![Test](https://github.com/shipengqi/vc/actions/workflows/ci.yaml/badge.svg)](https://github.com/shipengqi/vc/actions/workflows/ci.yaml)
+[![test](https://github.com/shipengqi/vc/actions/workflows/test.yaml/badge.svg)](https://github.com/shipengqi/vc/actions/workflows/test.yaml)
 [![Codecov](https://codecov.io/gh/shipengqi/vc/branch/main/graph/badge.svg?token=SMU4SI304O)](https://codecov.io/gh/shipengqi/vc)
+[![Go Report Card](https://goreportcard.com/badge/github.com/shipengqi/vc)](https://goreportcard.com/report/github.com/shipengqi/vc)
 [![Release](https://img.shields.io/github/release/shipengqi/vc.svg)](https://github.com/shipengqi/vc/releases)
 [![License](https://img.shields.io/github/license/shipengqi/vc)](https://github.com/shipengqi/vc/blob/main/LICENSE)
 
