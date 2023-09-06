@@ -3,7 +3,7 @@ module github.com/shipengqi/vc
 go 1.20
 
 require (
-	github.com/shipengqi/golib v0.1.38
+	github.com/shipengqi/golib v0.2.1
 	github.com/stretchr/testify v1.8.4
 )
 
