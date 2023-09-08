@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-
-	"github.com/shipengqi/golib/strutil"
 )
 
 const (
@@ -43,7 +41,7 @@ type New func(string) (Comparable, error)
 // NewConstraint returns a Constraints instance that a Comparable instance can
 // be checked against. If there is a parse error it will be returned.
 func NewConstraint(c string, fn New) (*Constraints, error) {
-	if strutil.IsEmpty(c) {
+	if strings.TrimSpace(c) == "" {
 		return nil, ErrInvalidConstraint
 	}
 	groups := strings.Split(c, "||")
