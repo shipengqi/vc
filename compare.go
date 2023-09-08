@@ -3,8 +3,6 @@ package vc
 import (
 	"strconv"
 	"strings"
-
-	"github.com/shipengqi/golib/strutil"
 )
 
 // Comparable An implementation of Comparable interface can be compared with constraints.
@@ -192,11 +190,11 @@ func comparePrePart(s, o string) int {
 func validatePrerelease(p string) error {
 	eparts := strings.Split(p, ".")
 	for _, p := range eparts {
-		if strutil.ContainsOnly(p, allowedNum) {
+		if containsOnly(p, allowedNum) {
 			if len(p) > 1 && p[0] == '0' {
 				return ErrSegmentStartsZero
 			}
-		} else if !strutil.ContainsOnly(p, allowedChars) {
+		} else if !containsOnly(p, allowedChars) {
 			return ErrInvalidPrerelease
 		}
 	}
@@ -211,9 +209,16 @@ func validatePrerelease(p string) error {
 func validateMetadata(m string) error {
 	eparts := strings.Split(m, ".")
 	for _, p := range eparts {
-		if !strutil.ContainsOnly(p, allowedChars) {
+		if !containsOnly(p, allowedChars) {
 			return ErrInvalidMetadata
 		}
 	}
 	return nil
+}
+
+// containsOnly like strings.ContainsAny but does an only instead of any.
+func containsOnly(s string, comp string) bool {
+	return strings.IndexFunc(s, func(r rune) bool {
+		return !strings.ContainsRune(comp, r)
+	}) == -1
 }
