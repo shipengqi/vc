@@ -10,7 +10,7 @@ Inspired by [Masterminds/semver](https://github.com/Masterminds/semver).
 [![Release](https://img.shields.io/github/release/shipengqi/vc.svg)](https://github.com/shipengqi/vc/releases)
 [![License](https://img.shields.io/github/license/shipengqi/vc)](https://github.com/shipengqi/vc/blob/main/LICENSE)
 
-## Get Started
+## Getting Started
 
 ## Semver Versions
 
