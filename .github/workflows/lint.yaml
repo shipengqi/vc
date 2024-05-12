@@ -8,10 +8,12 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'README.md'
+      - '.goreleaser.yaml'
   pull_request:
     paths-ignore:
       - 'docs/**'
       - 'README.md'
+      - '.goreleaser.yaml'
 permissions:
   contents: read
 
@@ -19,7 +21,7 @@ jobs:
   golangci:
     strategy:
       matrix:
-        go: [ '1.20', '1.21' ]
+        go: [ '1.20', '1.21', '1.22' ]
         os: [ ubuntu-latest, windows-latest ]
     permissions:
       contents: read  # for actions/checkout to fetch code
